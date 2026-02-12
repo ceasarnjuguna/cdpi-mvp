@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CDPI-MVP
 
 **Cross-Domain Policy Integration Tool**
@@ -40,3 +41,6 @@ Three pre-built scenarios load without any config files:
 ## Tech stack
 
 Next.js 14 · TypeScript · Tailwind CSS · React Flow · Zod · Vitest
+=======
+# cdpi-mvp
+>>>>>>> a94b0e9cc105910e84d63123919cc56585b69d08
