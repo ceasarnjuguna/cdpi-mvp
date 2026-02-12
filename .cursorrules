@@ -1,0 +1,3 @@
+Project: CDPI-MVP. TypeScript strict mode. No `any`. Framework: Next.js 14 App Router.
+Core types live in src/lib/types.ts — always import from there, never redefine inline.
+No database. No external API calls at runtime. No Azure/Terraform in MVP.

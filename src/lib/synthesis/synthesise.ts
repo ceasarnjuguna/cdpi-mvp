@@ -1,0 +1,105 @@
+import type { ConflictRecord, SynthesisResult } from '@/lib/types';
+import { cidrToWildcard } from '@/lib/graph/cidrUtils';
+
+/**
+ * Generate fix recommendations for a detected conflict
+ */
+export function synthesise(conflict: ConflictRecord): SynthesisResult {
+  const cidrStr = `${conflict.affectedCidr.address}/${conflict.affectedCidr.prefix}`;
+  
+  switch (conflict.type) {
+    case 'SHADOW_RULE': {
+      // Cisco permits traffic that AWS silently blocks
+      // Fix: Add AWS inbound rule to match Cisco permission
+      const protocol = conflict.ciscoRule.protocol === 'all' ? 'tcp' : conflict.ciscoRule.protocol;
+      
+      return {
+        conflictId: conflict.id,
+        ciscoCLI: [],
+        awsJsonPatch: {
+          IpProtocol: protocol,
+          FromPort: conflict.affectedPort.from,
+          ToPort: conflict.affectedPort.to,
+          IpRanges: [{
+            CidrIp: cidrStr,
+            Description: 'Added by CDPI — resolves shadow rule conflict',
+          }],
+        },
+        explanation: `AWS Security Group is missing an inbound rule for ${cidrStr} on port ${conflict.affectedPort.from}.
+Add the above inbound rule to allow traffic that the Cisco ACL already permits.
+This resolves the shadow rule and eliminates the silent AWS default-deny drop.`,
+      };
+    }
+    
+    case 'ASYMMETRIC_BOUNDARY': {
+      // Cisco denies traffic but AWS has no corresponding restriction
+      // AWS SGs cannot explicitly deny - provide guidance on both sides
+      return {
+        conflictId: conflict.id,
+        ciscoCLI: [
+          `! Verify this deny rule is applied inbound on the interface facing ${cidrStr}`,
+          `ip access-list extended CLOUD-BOUNDARY`,
+          ` deny ip ${conflict.affectedCidr.address} ${cidrToWildcard(conflict.affectedCidr)} any`,
+          ` permit ip any any`,
+          `! Apply with: interface <WAN-INTERFACE>`,
+          `!             ip access-group CLOUD-BOUNDARY in`,
+        ],
+        awsJsonPatch: {
+          _action: 'RESTRICT_OR_REMOVE_RULE',
+          _note: 'AWS Security Groups cannot explicitly deny traffic.',
+          _instruction: `Ensure no existing SG inbound rule permits ${cidrStr} on any port.
+                 If ${cidrStr} must be blocked, ensure it is absent from all IpRanges
+                 across all IpPermissions in this Security Group.`,
+          _affectedCidr: cidrStr,
+        },
+        explanation: `Cisco ACL denies ${cidrStr} but AWS SG has no corresponding restriction.
+AWS Security Groups have no explicit deny — the fix is to ensure ${cidrStr}
+is not present in any inbound SG rule. The Cisco CLI above verifies the on-prem
+deny is correctly applied at the cloud boundary interface.`,
+      };
+    }
+    
+    case 'PERMIT_MISMATCH': {
+      // Both sides permit but on different port ranges - align them
+      const ciscoPort = `${conflict.ciscoRule.dstPort.from}-${conflict.ciscoRule.dstPort.to}`;
+      const awsPort = conflict.awsRule
+        ? `${conflict.awsRule.dstPort.from}-${conflict.awsRule.dstPort.to}`
+        : 'none';
+      
+      const protocol = conflict.ciscoRule.protocol === 'all' ? 'tcp' : conflict.ciscoRule.protocol;
+      
+      return {
+        conflictId: conflict.id,
+        ciscoCLI: [
+          `! Review port range alignment for ${cidrStr}`,
+          `! Cisco permits: ports ${ciscoPort}`,
+          `! AWS permits:   ports ${awsPort}`,
+          `! Add missing port range to whichever side is incomplete`,
+        ],
+        awsJsonPatch: {
+          _action: 'ALIGN_PORT_RANGE',
+          IpProtocol: protocol,
+          FromPort: conflict.ciscoRule.dstPort.from,
+          ToPort: conflict.ciscoRule.dstPort.to,
+          IpRanges: [{
+            CidrIp: cidrStr,
+            Description: 'Added by CDPI — aligns port range with Cisco ACL',
+          }],
+        },
+        explanation: `Cisco permits ports ${ciscoPort} for ${cidrStr} but AWS permits ports ${awsPort}.
+The port ranges do not overlap. Add the AWS JSON patch above to align coverage,
+or review the Cisco ACL if the AWS range is the intended policy.`,
+      };
+    }
+    
+    default: {
+      // Future conflict types
+      return {
+        conflictId: conflict.id,
+        ciscoCLI: ['! Manual review required for this conflict type'],
+        awsJsonPatch: { _note: 'Manual review required' },
+        explanation: `Conflict type ${conflict.type} requires manual review.`,
+      };
+    }
+  }
+}

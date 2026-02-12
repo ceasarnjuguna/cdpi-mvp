@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CDPI-MVP
 
-## Getting Started
+**Cross-Domain Policy Integration Tool**
 
-First, run the development server:
+Automated network policy verification and synthesis for hybrid-cloud environments.
+
+*Master's Research Project — ISR6890A — USIU-Africa — 2026*
+
+## What it does
+
+Detects policy conflicts between on-premises Cisco IOS ACLs and AWS Security Groups,
+then auto-generates corrected configuration files for both domains.
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Run tests
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy
 
-## Learn More
+Connect this repo to Vercel. Zero configuration required.
 
-To learn more about Next.js, take a look at the following resources:
+## Demo scenarios
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Three pre-built scenarios load without any config files:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Shadow Rule** — Cisco permits TCP 443, AWS silently blocks it (CRITICAL)
+- **Asymmetric Boundary** — Cisco denies a subnet, AWS has no corresponding restriction (HIGH)
+- **Clean Config** — Policies are consistent, zero conflicts expected (true-negative validation)
 
-## Deploy on Vercel
+## Tech stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next.js 14 · TypeScript · Tailwind CSS · React Flow · Zod · Vitest

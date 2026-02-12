@@ -1,0 +1,4 @@
+{
+  "ciscoConfig": "permit tcp 10.0.1.0 0.0.0.255 any eq 443",
+  "awsSgJson": "{\"GroupId\":\"sg-001\",\"IpPermissions\":[]}"
+}
