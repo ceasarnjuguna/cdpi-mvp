@@ -33,8 +33,11 @@ describe('End-to-End Pipeline Integration', () => {
     expect(fix.ciscoCLI).toHaveLength(0);
     
     const patch = fix.awsJsonPatch as any;
-    expect(patch.IpRanges).toBeDefined();
-    expect(patch.IpRanges[0].CidrIp).toBe('10.0.1.0/24');
+    expect(patch.GroupId).toBe('sg-synthesized-fix');
+    expect(patch.IpPermissions).toBeDefined();
+    expect(patch.IpPermissions).toHaveLength(1);
+    expect(patch.IpPermissions[0].IpRanges).toBeDefined();
+    expect(patch.IpPermissions[0].IpRanges[0].CidrIp).toBe('10.0.1.0/24');
   });
 
   it('Test 2 - Scenario 2 full pipeline: Asymmetric Boundary detected', () => {
